@@ -42,19 +42,20 @@ type Market struct {
 	Details []Transactions `xml:"trans"`
 }
 
+// NOTE: Changed Cost from int to float32 since there are decimals in the prices.
 type Transactions struct {
 	XMLName xml.Name `xml:"trans"`
 	ItemID  int      `xml:"itemid"`
 	Vol     int      `xml:"vol"`
-	Cost    int      `xml:"cost"`
+	Cost    float32  `xml:"cost"`
 	When    int64    `xml:"when"`
 }
 
 type itemMarketTrans struct {
-	ItemID int   `json:"itemid"`
-	Volume int   `json:"vol"`
-	Price  int   `json:"price"`
-	Time   int64 `json:"time"`
+	ItemID int     `json:"itemid"`
+	Volume int     `json:"vol"`
+	Price  float32 `json:"price"`
+	Time   int64   `json:"time"`
 }
 
 type itemMarketPrices struct {
@@ -114,7 +115,6 @@ func main() {
 	itemList4, err := mafiaParsePrices(mafUP)
 	marshalToJSON(itemList4, "testMafiaPrices.json")
 	fmt.Println("Done Last")
-
 }
 
 func marshalToJSON(itemList any, fileName string) error {

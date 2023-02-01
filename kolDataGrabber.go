@@ -45,6 +45,7 @@ type Market struct {
 // NOTE: Changed Cost from int to float32 since there are decimals in the prices.
 type Transactions struct {
 	XMLName xml.Name `xml:"trans"`
+	TransID int      `xml:"id,attr"`
 	ItemID  int      `xml:"itemid"`
 	Vol     int      `xml:"vol"`
 	Cost    float32  `xml:"cost"`
@@ -52,10 +53,11 @@ type Transactions struct {
 }
 
 type itemMarketTrans struct {
-	ItemID int     `json:"itemid"`
-	Volume int     `json:"vol"`
-	Price  float32 `json:"price"`
-	Time   int64   `json:"time"`
+	TransID int     `json:"trans"`
+	ItemID  int     `json:"itemid"`
+	Volume  int     `json:"vol"`
+	Price   float32 `json:"price"`
+	Time    int64   `json:"time"`
 }
 
 type itemMarketPrices struct {
@@ -196,10 +198,11 @@ func marketParseTrans(URL string) ([]itemMarketTrans, error) {
 	for i := 0; i < len(market.Details); i++ {
 		// Create a new item from each market.Detail[i] item and creates a struct for it
 		newItem := itemMarketTrans{
-			ItemID: market.Details[i].ItemID,
-			Volume: market.Details[i].Vol,
-			Price:  market.Details[i].Cost,
-			Time:   market.Details[i].When,
+			TransID: market.Details[i].TransID,
+			ItemID:  market.Details[i].ItemID,
+			Volume:  market.Details[i].Vol,
+			Price:   market.Details[i].Cost,
+			Time:    market.Details[i].When,
 		}
 		// Append new item for storage.
 		itemList = append(itemList, newItem)

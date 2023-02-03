@@ -52,7 +52,7 @@ type Transactions struct {
 	When    int64    `xml:"when"`
 }
 
-type itemMarketTrans struct {
+type MarketTrans struct {
 	TransID int     `json:"trans"`
 	ItemID  int     `json:"itemid"`
 	Volume  int     `json:"vol"`
@@ -60,12 +60,12 @@ type itemMarketTrans struct {
 	Time    int64   `json:"time"`
 }
 
-type itemMarketPrices struct {
+type MarketPrices struct {
 	ItemID int `json:"itemid"`
 	Price  int `json:"Price"`
 }
 
-type itemMafia struct {
+type MafiaPrices struct {
 	ItemID int   `json:"itemid"`
 	Time   int64 `json:"time"`
 	Price  int   `json:"price"`
@@ -87,34 +87,31 @@ func main() {
 		896,
 	}
 	// Latest Prices of 194, 895, 896
-	marUP, err := marketURLPrices(intSlice)
-	if err != nil {
-		fmt.Printf("error creating latestprice url: %v", err)
-	}
+	marUP, _ := marketURLPrices(intSlice)
 	// Prices of each item's 5th listing.
 	mafUP := mafiaURLPrices()
 
 	fmt.Println("Starting")
 
-	itemList1, err := marketParseTrans(mUTID)
+	itemList1, _ := marketParseTrans(mUTID)
 	marshalToJSON(itemList1, "testNewMarketID.json")
 	fmt.Println("Done First")
 
 	time.Sleep(time.Second * 10)
 	fmt.Println("Start Second")
-	itemList2, err := marketParseTrans(mUTA)
+	itemList2, _ := marketParseTrans(mUTA)
 	marshalToJSON(itemList2, "testNewMarketAll.json")
 	fmt.Println("Done Second")
 
 	time.Sleep(time.Second * 10)
 	fmt.Println("Start Third")
-	itemList3, err := marketParsePrices(marUP)
+	itemList3, _ := marketParsePrices(marUP)
 	marshalToJSON(itemList3, "testLatestPrices.json")
 	fmt.Println("Done Third")
 
 	time.Sleep(time.Second * 10)
 	fmt.Println("Start Last")
-	itemList4, err := mafiaParsePrices(mafUP)
+	itemList4, _ := mafiaParsePrices(mafUP)
 	marshalToJSON(itemList4, "testMafiaPrices.json")
 	fmt.Println("Done Last")
 }
@@ -170,7 +167,7 @@ func marketURLTransAll(start int64, end int64) string {
 }
 
 // Parses the ColdFront newmarket XML transaction data and returns to slice ready for json marshal.
-func marketParseTrans(URL string) ([]itemMarketTrans, error) {
+func marketParseTrans(URL string) ([]MarketTrans, error) {
 	// https://kol.coldfront.net/newmarket/export.php?start=1674968400&end=1674969465&itemid=
 	// Data is in XML format.
 	// Incoming data format: TransactionID: (ItemId Volume Cost Time)
@@ -192,12 +189,12 @@ func marketParseTrans(URL string) ([]itemMarketTrans, error) {
 
 	// Now do stuff with market and create json from it.
 	// itemList slice is used to store each item xml block
-	var itemList []itemMarketTrans
+	var itemList []MarketTrans
 
 	// Iterate through all the unmarshalled xml items.
 	for i := 0; i < len(market.Details); i++ {
 		// Create a new item from each market.Detail[i] item and creates a struct for it
-		newItem := itemMarketTrans{
+		newItem := MarketTrans{
 			TransID: market.Details[i].TransID,
 			ItemID:  market.Details[i].ItemID,
 			Volume:  market.Details[i].Vol,
@@ -208,7 +205,6 @@ func marketParseTrans(URL string) ([]itemMarketTrans, error) {
 		itemList = append(itemList, newItem)
 	}
 
-	// NOTE: need to return itemList or do somethign with it.
 	return itemList, nil
 }
 
@@ -234,7 +230,7 @@ func marketURLPrices(itemIDs []int) (string, error) {
 }
 
 // Parses the ColdFront newmarket lastest item prices into usable format.
-func marketParsePrices(URL string) ([]itemMarketPrices, error) {
+func marketParsePrices(URL string) ([]MarketPrices, error) {
 	// NOTE: Can reimplement using the net/html golang pkg instead.
 	// https://kol.coldfront.net/newmarket/latestprice.php?
 	// Data is just html.
@@ -245,7 +241,7 @@ func marketParsePrices(URL string) ([]itemMarketPrices, error) {
 	}
 	defer resp.Body.Close()
 
-	var itemList []itemMarketPrices
+	var itemList []MarketPrices
 
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
@@ -256,7 +252,7 @@ func marketParsePrices(URL string) ([]itemMarketPrices, error) {
 
 		id, _ := strconv.Atoi(lineSlice[0])
 		price, _ := strconv.Atoi(lineSlice[1])
-		newItem := itemMarketPrices{
+		newItem := MarketPrices{
 			ItemID: id,
 			Price:  price,
 		}
@@ -264,7 +260,6 @@ func marketParsePrices(URL string) ([]itemMarketPrices, error) {
 		itemList = append(itemList, newItem)
 	}
 
-	// NOTE: need to return itemList or do somethign with it.
 	return itemList, nil
 }
 
@@ -274,7 +269,7 @@ func mafiaURLPrices() string {
 }
 
 // Parses the kolmafia's item:time:price data list into useable format.
-func mafiaParsePrices(URL string) ([]itemMafia, error) {
+func mafiaParsePrices(URL string) ([]MafiaPrices, error) {
 	// https://kolmafia.us/scripts/updateprices.php?action=getmap
 	// Data is a pure txt file.
 	// Incoming data format: ItemId	TimeLastUpdated	Price(of the 5th item)
@@ -284,7 +279,7 @@ func mafiaParsePrices(URL string) ([]itemMafia, error) {
 	}
 	defer resp.Body.Close()
 
-	var itemList []itemMafia
+	var itemList []MafiaPrices
 	// Scanner used so I can parse line by line.
 	scanner := bufio.NewScanner(resp.Body)
 	//Skipping the first line because it isn't needed
@@ -297,7 +292,7 @@ func mafiaParsePrices(URL string) ([]itemMafia, error) {
 		time, _ := strconv.ParseInt(lineSlice[1], 10, 64)
 		price, _ := strconv.Atoi(lineSlice[2])
 
-		newItem := itemMafia{
+		newItem := MafiaPrices{
 			ItemID: id,
 			Time:   time,
 			Price:  price,
@@ -306,6 +301,5 @@ func mafiaParsePrices(URL string) ([]itemMafia, error) {
 		itemList = append(itemList, newItem)
 	}
 
-	// NOTE: need to return itemList or do somethign with it.
 	return itemList, nil
 }

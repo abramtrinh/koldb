@@ -1,6 +1,7 @@
 *.json
 *.txt
 *.xml
+*.env
 /files
 /temp
 /testJSON

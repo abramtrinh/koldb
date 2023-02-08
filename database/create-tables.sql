@@ -1,3 +1,5 @@
+CREATE DATABASE IF NOT EXISTS koldb;
+USE koldb;
 -- reminder to remove. using this to just get fresh start.
 -- bootstrap or do something on start
 DROP TABLE IF EXISTS prices;
@@ -16,7 +18,7 @@ CREATE TABLE item (
 );
 
 CREATE TABLE transactions (
-    transID INT NOT NULL AUTO_INCRMENT,
+    transID INT NOT NULL AUTO_INCREMENT,
     itemID INT NOT NULL,
     volume INT NOT NULL,
     cost DECIMAL(11,2) NOT NULL,

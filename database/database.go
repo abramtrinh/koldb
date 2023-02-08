@@ -53,7 +53,8 @@ func InsertItems(wg *sync.WaitGroup, itemID int, itemName string) error {
 
 	// Using REPLACE over INSERT because Mr. A has 1 old 1 new value.
 	// REPLACE deletes old entries which causes other tables to cascade. So...
-	_, err := db.Exec("REPLACE INTO item (itemID, itemName) VALUES (?, ?)", itemID, itemName)
+	// Instead now using INSERT . . . ON DUPLICATE KEY UPDATE so above doesn't occur.
+	_, err := db.Exec("INSERT INTO item (itemID, itemName) VALUES (?, ?) ON DUPLICATE KEY UPDATE itemName=?", itemID, itemName, itemName)
 	if err != nil {
 		//temp need to remove either goroutines or use channels to return errors
 		fmt.Println("error InsertItems")
@@ -66,7 +67,8 @@ func InsertItems(wg *sync.WaitGroup, itemID int, itemName string) error {
 // Function (used with goroutines) init populates prices table.
 func InsertMafiaPrices(wg *sync.WaitGroup, itemID int, cost int, epochTime int64) error {
 	defer wg.Done()
-	_, err := db.Exec("INSERT INTO prices (itemID, cost, epochTime) VALUES (?, ?, ?)", itemID, cost, epochTime)
+	// INSERT . . . ON DUPLICATE KEY UPUDATE is good here because update prices regularly.
+	_, err := db.Exec("INSERT INTO prices (itemID, cost, epochTime) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE cost=?, epochTime=?", itemID, cost, epochTime, cost, epochTime)
 	if err != nil {
 		//temp need to remove either goroutines or use channels to return errors
 		fmt.Println("error InsertMafiaPrices")

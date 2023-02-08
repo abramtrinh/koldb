@@ -53,7 +53,7 @@ func InsertItems(wg *sync.WaitGroup, itemID int, itemName string) error {
 
 	// Using REPLACE over INSERT because Mr. A has 1 old 1 new value.
 	// REPLACE deletes old entries which causes other tables to cascade. So...
-	// Instead now using INSERT . . . ON DUPLICATE KEY UPDATE so above doesn't occur.
+	// Instead now using INSERT ... ON DUPLICATE KEY UPDATE so above doesn't occur.
 	_, err := db.Exec("INSERT INTO item (itemID, itemName) VALUES (?, ?) ON DUPLICATE KEY UPDATE itemName=?", itemID, itemName, itemName)
 	if err != nil {
 		//temp need to remove either goroutines or use channels to return errors
@@ -67,7 +67,7 @@ func InsertItems(wg *sync.WaitGroup, itemID int, itemName string) error {
 // Function (used with goroutines) init populates prices table.
 func InsertMafiaPrices(wg *sync.WaitGroup, itemID int, cost int, epochTime int64) error {
 	defer wg.Done()
-	// INSERT . . . ON DUPLICATE KEY UPUDATE is good here because update prices regularly.
+	// INSERT ... ON DUPLICATE KEY UPUDATE is good here because update prices regularly.
 	_, err := db.Exec("INSERT INTO prices (itemID, cost, epochTime) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE cost=?, epochTime=?", itemID, cost, epochTime, cost, epochTime)
 	if err != nil {
 		//temp need to remove either goroutines or use channels to return errors
@@ -78,10 +78,11 @@ func InsertMafiaPrices(wg *sync.WaitGroup, itemID int, cost int, epochTime int64
 }
 
 // Function (used with goroutines) init populates transactions table.
-func InsertMarketTrans(wg *sync.WaitGroup, itemID int, volume int, cost float32, epochTime int64) error {
+func InsertMarketTrans(wg *sync.WaitGroup, transID int, itemID int, volume int, cost float32, epochTime int64) error {
 	defer wg.Done()
-	// NOTE: Actual TransID exists but is not inserted. Using AUTO_INCREMENT pk instead.
-	_, err := db.Exec("INSERT INTO transactions (itemID, volume, cost, epochTime) VALUES (?, ?, ?, ?)", itemID, volume, cost, epochTime)
+	// INSERT ... ON DUPLICATE KEY UPDATE is used instead of INSERT IGNORE because latter supresses errors.
+	// transID=transID is used for the UPDATE because MySQL doesn't actually do the update.
+	_, err := db.Exec("INSERT INTO transactions (transID, itemID, volume, cost, epochTime) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE transID=transID", transID, itemID, volume, cost, epochTime)
 	if err != nil {
 		fmt.Println("error InsertMarketTrans")
 		return fmt.Errorf("error func(insertMarketTrans) db.Exec() %w\n", err)

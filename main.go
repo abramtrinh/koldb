@@ -224,7 +224,7 @@ func TempTestInsertMarketTrans() {
 	var wg sync.WaitGroup
 	for i := 0; i < len(mafiaTrans); i++ {
 		wg.Add(1)
-		go database.InsertMarketTrans(&wg, mafiaTrans[i].ItemID, mafiaTrans[i].Volume, mafiaTrans[i].Price, mafiaTrans[i].Time)
+		go database.InsertMarketTrans(&wg, mafiaTrans[i].TransID, mafiaTrans[i].ItemID, mafiaTrans[i].Volume, mafiaTrans[i].Price, mafiaTrans[i].Time)
 	}
 
 	wg.Wait()

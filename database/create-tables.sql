@@ -18,7 +18,7 @@ CREATE TABLE item (
 );
 
 CREATE TABLE transactions (
-    transID INT NOT NULL AUTO_INCREMENT,
+    transID INT NOT NULL,
     itemID INT NOT NULL,
     volume INT NOT NULL,
     cost DECIMAL(11,2) NOT NULL,

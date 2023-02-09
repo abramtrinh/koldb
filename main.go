@@ -13,12 +13,12 @@ import (
 	"github.com/abramtrinh/koldb/structs"
 )
 
-var filePath string = "./database/files/miniJSON/"
+var filePath string = "./"
 var itemsJSON string = filePath + "items.json"
-var miniLatestPrices string = filePath + "miniLatestPrices.json"
-var miniMafiaPrices string = filePath + "miniMafiaPrices.json"
-var miniNewMarketAll string = filePath + "miniNewMarketAll.json"
-var miniNewMarketID string = filePath + "miniNewMarketID.json"
+var miniLatestPrices string = filePath + "testLatestPrices.json"
+var miniMafiaPrices string = filePath + "testMafiaPrices.json"
+var miniNewMarketAll string = filePath + "testNewMarketAll.json"
+var miniNewMarketID string = filePath + "testNewMarketID.json"
 
 func main() {
 	//TempTestData()
@@ -29,9 +29,10 @@ func main() {
 		return
 	}
 
-	TempTestInsertItems()
-	TempTestInsertMafiaPrices()
-	TempTestInsertMarketTrans()
+	//TempTestInsertItems()
+	//TempTestInsertMafiaPrices()
+	//TempTestInsertMarketTrans()
+
 }
 
 // Takes in any data slice and marshals into given fileName
@@ -75,6 +76,8 @@ func TempTestData() {
 	// Time == Exactly 1 Day ago
 	startTime := endTime - data.EpochDay
 
+	mUI := data.MarketURLItems()
+
 	// Transactions of 24 hours ago till now of just Mr. A
 	mUTID := data.MarketURLTransID(startTime, endTime, "194")
 	// All transactions from 24 hours ago till now.
@@ -90,6 +93,19 @@ func TempTestData() {
 	mafUP := data.MafiaURLPrices()
 
 	fmt.Println("Starting")
+
+	itemList0, err := data.MarketParseItems(mUI)
+	if err != nil {
+		fmt.Printf("error 0 MarketParseItems: %v\n", err)
+	}
+
+	if err := MarshalToJSONFile(itemList0, "items.json"); err != nil {
+		fmt.Printf("error 0 MarshalToJSONFile: %v\n", err)
+	}
+
+	fmt.Println("Done Zero")
+	time.Sleep(time.Second * 5)
+	fmt.Println("Start First")
 
 	itemList1, err := data.MarketParseTrans(mUTID)
 	if err != nil {
@@ -119,7 +135,7 @@ func TempTestData() {
 
 	itemList3, err := data.MarketParsePrices(marUP)
 	if err != nil {
-		fmt.Printf("error 3 MarketParseTrans: %v\n", err)
+		fmt.Printf("error 3 MarketParsePrices: %v\n", err)
 	}
 
 	if err := MarshalToJSONFile(itemList3, "testLatestPrices.json"); err != nil {
@@ -132,7 +148,7 @@ func TempTestData() {
 
 	itemList4, err := data.MafiaParsePrices(mafUP)
 	if err != nil {
-		fmt.Printf("error 4 MarketParseTrans: %v\n", err)
+		fmt.Printf("error 4 MafiaParsePrices: %v\n", err)
 	}
 
 	if err := MarshalToJSONFile(itemList4, "testMafiaPrices.json"); err != nil {
@@ -142,6 +158,7 @@ func TempTestData() {
 	fmt.Println("Done Last")
 }
 
+// Note: Could run these batch file updates as a database transaction. Not sure if needed.
 func TempTestInsertItems() {
 	byteSlice, err := OpenReadJSONFile(itemsJSON)
 	if err != nil {
@@ -168,6 +185,8 @@ func TempTestInsertItems() {
 		/*
 			BIG NOTE: error returns for insertItems and the like are not handled.
 			Check out "handling goroutine errors" / "goroutines with error returns"
+			Goroutine errors are not checked. Could not use goroutines and check errors normally.
+			Use channels, error groups, or logging possibly?
 		*/
 	}
 
@@ -230,5 +249,5 @@ func TempTestInsertMarketTrans() {
 	wg.Wait()
 	end := time.Now()
 	fmt.Printf("took %v\n", end.Sub(start))
-	fmt.Println("Done init mafia prices table.")
+	fmt.Println("Done init market trans table.")
 }

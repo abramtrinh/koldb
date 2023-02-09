@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/gocolly/colly"
 	// JSON struct is imported as pkg because it is used by multiple other pkgs.
 	// Don't want accidental circular dependencies
 	"github.com/abramtrinh/koldb/structs"
@@ -51,6 +53,60 @@ type Transactions struct {
 	Vol     int      `xml:"vol"`
 	Cost    float32  `xml:"cost"`
 	When    int64    `xml:"when"`
+}
+
+// Creates URL that contains a dropdown box of all tradeable item names and ID in the HTML.
+func MarketURLItems() string {
+	return "https://g1wjmf0i0h.execute-api.us-east-2.amazonaws.com/default/itemindex"
+}
+
+// Parses dropdown box for item ID and item name using colly to scrape.
+func MarketParseItems(URL string) ([]structs.Items, error) {
+	collector := colly.NewCollector()
+
+	var itemList []structs.Items
+
+	collector.OnHTML("select[name=itemlist] option", func(h *colly.HTMLElement) {
+		//This returns the value attribute of <option value=""
+		urlString := h.Attr("value")
+
+		idString2Int, err := parseItemNumber(urlString)
+		if err != nil {
+			fmt.Printf("error parsing item number: %v", err)
+			return
+		}
+
+		newItem := structs.Items{
+			//This returns the text inbetween <option></option>
+			Name: h.Text,
+			ID:   idString2Int,
+		}
+		itemList = append(itemList, newItem)
+	})
+
+	// This is where the "get" occurs. You predefine the actions then run the get.
+	if err := collector.Visit(URL); err != nil {
+		return nil, fmt.Errorf("error colly visiting url: %v", err)
+	}
+
+	return itemList, nil
+}
+
+// Parses a url string to find the item number which is preceded by "itemid="
+func parseItemNumber(urlString string) (int, error) {
+	//Regex to find itemid=0000 where 0000 is any id number from urlString
+	reg, err := regexp.Compile(`itemid=(\d*)`)
+	if err != nil {
+		return 0, fmt.Errorf("error compiling regex: %w", err)
+	}
+
+	//returns itemid=0000 slice where [0] is itemid=0000 and [1] is 0000
+	idStringNumber := reg.FindStringSubmatch(urlString)[1]
+	idNumber, err := strconv.Atoi(idStringNumber)
+	if err != nil {
+		return 0, fmt.Errorf("error converting str2int: %w", err)
+	}
+	return idNumber, nil
 }
 
 // Creates URL that returns all transactions for itemid occuring in specified time frame on ColdFront.

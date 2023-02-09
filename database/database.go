@@ -57,7 +57,7 @@ func InsertItems(wg *sync.WaitGroup, itemID int, itemName string) error {
 	_, err := db.Exec("INSERT INTO item (itemID, itemName) VALUES (?, ?) ON DUPLICATE KEY UPDATE itemName=?", itemID, itemName, itemName)
 	if err != nil {
 		//temp need to remove either goroutines or use channels to return errors
-		fmt.Println("error InsertItems")
+		fmt.Printf("error InsertItems %v\n", err)
 		// Should I fatal/exit if this fails? Don't want to continue if bad insert. tx?
 		return fmt.Errorf("error func(insertItems) db.Exec() %w\n", err)
 	}
@@ -67,11 +67,24 @@ func InsertItems(wg *sync.WaitGroup, itemID int, itemName string) error {
 // Function (used with goroutines) init populates prices table.
 func InsertMafiaPrices(wg *sync.WaitGroup, itemID int, cost int, epochTime int64) error {
 	defer wg.Done()
+
+	var tempItemID int
+	// Check if item that has a price is not in the "currently tradeable" item list.
+	// Stops foreign key constraint fails.
+	row := db.QueryRow("SELECT * FROM item WHERE itemID=?", itemID)
+	if err := row.Scan(&tempItemID); err != nil {
+		if err == sql.ErrNoRows {
+			// Reason we don't throw error is because I'm trying to ignore old items that used to be tradeable.
+			return nil
+		}
+	}
+
 	// INSERT ... ON DUPLICATE KEY UPUDATE is good here because update prices regularly.
-	_, err := db.Exec("INSERT INTO prices (itemID, cost, epochTime) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE cost=?, epochTime=?", itemID, cost, epochTime, cost, epochTime)
+	_, err := db.Exec("INSERT INTO prices (itemID, cost, epochTime) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE cost=?, epochTime=?",
+		itemID, cost, epochTime, cost, epochTime)
 	if err != nil {
 		//temp need to remove either goroutines or use channels to return errors
-		fmt.Println("error InsertMafiaPrices")
+		fmt.Printf("error InsertMafiaPrices %v\n", err)
 		return fmt.Errorf("error func(insertMafiaPrices) db.Exec() %w\n", err)
 	}
 	return nil
@@ -82,9 +95,11 @@ func InsertMarketTrans(wg *sync.WaitGroup, transID int, itemID int, volume int, 
 	defer wg.Done()
 	// INSERT ... ON DUPLICATE KEY UPDATE is used instead of INSERT IGNORE because latter supresses errors.
 	// transID=transID is used for the UPDATE because MySQL doesn't actually do the update.
-	_, err := db.Exec("INSERT INTO transactions (transID, itemID, volume, cost, epochTime) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE transID=transID", transID, itemID, volume, cost, epochTime)
+	_, err := db.Exec("INSERT INTO transactions (transID, itemID, volume, cost, epochTime) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE transID=transID",
+		transID, itemID, volume, cost, epochTime)
 	if err != nil {
-		fmt.Println("error InsertMarketTrans")
+		//temp need to remove either goroutines or use channels to return errors
+		fmt.Printf("error InsertMarketTrans %v\n", err)
 		return fmt.Errorf("error func(insertMarketTrans) db.Exec() %w\n", err)
 	}
 	return nil

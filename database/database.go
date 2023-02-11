@@ -54,7 +54,12 @@ func InsertItems(wg *sync.WaitGroup, itemID int, itemName string) error {
 	// Using REPLACE over INSERT because Mr. A has 1 old 1 new value.
 	// REPLACE deletes old entries which causes other tables to cascade. So...
 	// Instead now using INSERT ... ON DUPLICATE KEY UPDATE so above doesn't occur.
-	_, err := db.Exec("INSERT INTO item (itemID, itemName) VALUES (?, ?) ON DUPLICATE KEY UPDATE itemName=?", itemID, itemName, itemName)
+	stmt := `
+	INSERT INTO item (itemID, itemName) 
+	VALUES (?, ?) 
+	ON DUPLICATE KEY UPDATE itemName=?`
+
+	_, err := db.Exec(stmt, itemID, itemName, itemName)
 	if err != nil {
 		//temp need to remove either goroutines or use channels to return errors
 		fmt.Printf("error InsertItems %v\n", err)
@@ -70,7 +75,14 @@ func InsertMafiaPrices(wg *sync.WaitGroup, itemID int, cost int, epochTime int64
 
 	// INSERT ... ON DUPLICATE KEY UPUDATE is good here because update prices regularly.
 	// Inserts itemID:cost:epochTime into `prices` if itemID is present in `item`. If already exists in `prices`, just updates it.
-	_, err := db.Exec("INSERT INTO prices (itemID, cost, epochTime) SELECT item.itemID, ?, ? FROM item WHERE item.itemID=? ON DUPLICATE KEY UPDATE prices.cost=?, prices.epochTime=?", cost, epochTime, itemID, cost, epochTime)
+	stmt := `
+	INSERT INTO prices (itemID, cost, epochTime)
+	SELECT item.itemID, ?, ? 
+	FROM item 
+	WHERE item.itemID=? 
+	ON DUPLICATE KEY UPDATE prices.cost=?, prices.epochTime=?`
+
+	_, err := db.Exec(stmt, cost, epochTime, itemID, cost, epochTime)
 	if err != nil {
 		//temp need to remove either goroutines or use channels to return errors
 		fmt.Printf("error InsertMafiaPrices %v\n", err)
@@ -82,10 +94,15 @@ func InsertMafiaPrices(wg *sync.WaitGroup, itemID int, cost int, epochTime int64
 // Function (used with goroutines) init populates transactions table.
 func InsertMarketTrans(wg *sync.WaitGroup, transID int, itemID int, volume int, cost float32, epochTime int64) error {
 	defer wg.Done()
+
 	// INSERT ... ON DUPLICATE KEY UPDATE is used instead of INSERT IGNORE because latter supresses errors.
 	// transID=transID is used for the UPDATE because MySQL doesn't actually do the update.
-	_, err := db.Exec("INSERT INTO transactions (transID, itemID, volume, cost, epochTime) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE transID=transID",
-		transID, itemID, volume, cost, epochTime)
+	stmt := `
+	INSERT INTO transactions (transID, itemID, volume, cost, epochTime) 
+	VALUES (?, ?, ?, ?, ?) 
+	ON DUPLICATE KEY UPDATE transID=transID`
+
+	_, err := db.Exec(stmt, transID, itemID, volume, cost, epochTime)
 	if err != nil {
 		//temp need to remove either goroutines or use channels to return errors
 		fmt.Printf("error InsertMarketTrans %v\n", err)

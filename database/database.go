@@ -68,20 +68,9 @@ func InsertItems(wg *sync.WaitGroup, itemID int, itemName string) error {
 func InsertMafiaPrices(wg *sync.WaitGroup, itemID int, cost int, epochTime int64) error {
 	defer wg.Done()
 
-	var tempItemID int
-	// Check if item that has a price is not in the "currently tradeable" item list.
-	// Stops foreign key constraint fails.
-	row := db.QueryRow("SELECT * FROM item WHERE itemID=?", itemID)
-	if err := row.Scan(&tempItemID); err != nil {
-		if err == sql.ErrNoRows {
-			// Reason we don't throw error is because I'm trying to ignore old items that used to be tradeable.
-			return nil
-		}
-	}
-
 	// INSERT ... ON DUPLICATE KEY UPUDATE is good here because update prices regularly.
-	_, err := db.Exec("INSERT INTO prices (itemID, cost, epochTime) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE cost=?, epochTime=?",
-		itemID, cost, epochTime, cost, epochTime)
+	// Inserts itemID:cost:epochTime into `prices` if itemID is present in `item`. If already exists in `prices`, just updates it.
+	_, err := db.Exec("INSERT INTO prices (itemID, cost, epochTime) SELECT item.itemID, ?, ? FROM item WHERE item.itemID=? ON DUPLICATE KEY UPDATE prices.cost=?, prices.epochTime=?", cost, epochTime, itemID, cost, epochTime)
 	if err != nil {
 		//temp need to remove either goroutines or use channels to return errors
 		fmt.Printf("error InsertMafiaPrices %v\n", err)

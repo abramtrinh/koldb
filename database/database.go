@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
@@ -109,4 +110,80 @@ func InsertMarketTrans(wg *sync.WaitGroup, transID int, itemID int, volume int, 
 		return fmt.Errorf("error func(insertMarketTrans) db.Exec() %w\n", err)
 	}
 	return nil
+}
+
+func InsertCurrTime(tableName string) error {
+	var stmt string
+
+	// Switch statement is used so I can "parameterize" the sql table name without string conc.
+	switch tableName {
+	case "gameDataUpdate":
+		fmt.Println("gameDataUpdate")
+		stmt = `
+		INSERT INTO gameDataUpdate (lastModified)
+		VALUES (?)
+		`
+	case "dbUpdate":
+		fmt.Println("dbUpdate")
+		stmt = `
+		INSERT INTO dbUpdate (lastModified)
+		VALUES (?)
+		`
+	default:
+		return fmt.Errorf("error InsertCurrTime wrong tableName: %s\n", tableName)
+	}
+
+	// UTC used for consistency. Remember to convert.
+	currTime := time.Now().UTC()
+	// This is the same format as MySQL DATETIME type.
+	formatTime := currTime.Format("2006-01-02 15:04:05")
+
+	_, err := db.Exec(stmt, formatTime)
+	if err != nil {
+		return fmt.Errorf("error InsertCurrTime db.Exec() %w\n", err)
+	}
+
+	return nil
+}
+
+func GetLastModifiedTime(tableName string) (time.Time, error) {
+	var stmt string
+
+	switch tableName {
+	case "gameDataUpdate":
+		fmt.Println("gameDataUpdate")
+		stmt = `
+		SELECT * FROM gameDataUpdate
+		ORDER BY lastModified DESC
+		LIMIT 1
+		`
+	case "dbUpdate":
+		fmt.Println("dbUpdate")
+		stmt = `
+		SELECT * FROM dbUpdate
+		ORDER BY lastModified DESC
+		LIMIT 1
+		`
+	default:
+		// time.Time{} is Go's zero date.
+		return time.Time{}, fmt.Errorf("error GetLastModifiedTime wrong tableName: %s\n", tableName)
+	}
+
+	// MySQL returns DATETIME type as string
+	var sqlTime string
+	row := db.QueryRow(stmt)
+	if err := row.Scan(&sqlTime); err != nil {
+		if err == sql.ErrNoRows {
+			return time.Time{}, fmt.Errorf("error GetLastModifiedTime no rows: %w\n", err)
+		}
+		return time.Time{}, fmt.Errorf("error GetLastModifiedTime scan: %w\n", err)
+	}
+
+	// timeModified is changed to time.Time type and has default of UTC
+	timeModified, err := time.Parse("2006-01-02 15:04:05", sqlTime)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("error GetLastModifiedTime parse time: %w\n", err)
+	}
+
+	return timeModified, nil
 }

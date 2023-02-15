@@ -35,3 +35,13 @@ CREATE TABLE prices (
     CONSTRAINT prices_pk PRIMARY KEY(itemID),
     CONSTRAINT prices_fk FOREIGN KEY (itemID) REFERENCES item(itemID) ON DELETE CASCADE
 );
+
+CREATE TABLE gameDataUpdate (
+    lastModified DATETIME NOT NULL,
+    CONSTRAINT gameDataUpdate_pk PRIMARY KEY(lastModified)
+);
+
+CREATE TABLE dbUpdate (
+    lastModified DATETIME NOT NULL,
+    CONSTRAINT dbUpdate_pk PRIMARY KEY(lastModified)
+);
